@@ -1,0 +1,25 @@
+name: Build Percy Clips APK
+on:
+  workflow_dispatch:
+  push:
+env:
+  APP_URL: https://percy-clipping-ai-26.base44.app
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unpack project
+        run: unzip -q -o PercyClips-project.zip
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - name: Set app link
+        run: sed -i "s|APP_URL_HERE|$APP_URL|" app/src/main/res/values/strings.xml
+      - name: Install SDK parts
+        run: 'yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null || true; $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0"'
+      - name: Install Gradle
+        run: wget -q https://services.gradle.org/distributions/gradle-8.7-bin.zip && unzip -q gradle-8.7-bin.zip -d $HOME && echo "$HOME/gradle-8.7/bin" >> $GITHUB_PATH
+      - name: Build APK
+        run: 'gradle assembleRelease --no-daemon --console=plain > build.log 2>&1 || { echo "=== ERRORS ==="; grep -n -E "error:|FAILED|e: file|wrong" build.log | head -40; exit 1; }'
+      - uses: actions/upload-artifact@v4
+        with: { name: PERCY-CLIPS-APK, path: 'app/build/outputs/apk/release/*.apk' }
